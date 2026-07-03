@@ -2,12 +2,6 @@
 
 **De la web de Bomberos Perú a tu base de datos analítica. Sin clicks, sin Excel, sin intervención manual.**
 
-Pipeline ETL que extrae emergencias en tiempo real del Cuerpo General de Bomberos Voluntarios del Perú (Dirección de Comunicaciones — Oficina de Tecnología y Comunicaciones), las limpia aplicando Change Data Capture con historial de cambios, y las modela en un Star Schema listo para dashboards de BI.
-
-```bash
-docker compose up -d  # 1 comando para levantar todo
-```
-
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Airflow-3.1.8-017CEE?logo=apacheairflow&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
@@ -15,6 +9,8 @@ docker compose up -d  # 1 comando para levantar todo
 ![Great Expectations](https://img.shields.io/badge/Great_Expectations-passing-FF6F00)
 ![pytest](https://img.shields.io/badge/pytest-62_passing-0A9EDC)
 ![Status](https://img.shields.io/badge/Status-Production-brightgreen)
+
+Pipeline ETL que extrae emergencias en tiempo real del Cuerpo General de Bomberos Voluntarios del Perú (Dirección de Comunicaciones — Oficina de Tecnología y Comunicaciones), las limpia aplicando Change Data Capture con historial de cambios, y las modela en un Star Schema listo para dashboards de BI.
 
 ---
 
@@ -44,25 +40,18 @@ docker compose up -d  # 1 comando para levantar todo
 
 ![Arquitectura ETL](ETL-ACCIDENTES.png)
 
-```
-🌐 SGNORTE          →    🥉 Bronze       →    🥈 Silver        →    🥇 Gold
-Plataforma Bomberos       RAW JSON             PostgreSQL            PostgreSQL
-Web scraping              Great Expectations   CDC + SCD Tipo 2      Star Schema
-                          Hash SHA256          es_actual             4 dims + FACT
-```
-
 ---
 
 ## Diseño del Pipeline
 
-**🥉 Bronze — Ingesta raw**
-Datos crudos guardados como JSON en disco. Great Expectations valida campos obligatorios y estructura antes de continuar. Hash SHA256 detecta si los datos cambiaron — si no, el pipeline se detiene.
+**🥉 Bronze — El archivo original**
+Antes de transformar nada, guardamos los datos exactamente como llegan desde la web de Bomberos: un JSON inalterable. Great Expectations verifica que la información esté completa y un hash SHA256 detecta si ya la procesamos antes — si no hay cambios, el pipeline se detiene ahí mismo.
 
-**🥈 Silver — Limpieza y CDC**
-CDC Tipo 2 con `es_actual` y `estado_anterior` — cada cambio de estado genera una nueva fila sin perder el historial. Separación de dirección, distrito, coordenadas y jerarquía de tipo de emergencia.
+**🥈 Silver — El historial clínico**
+Cada emergencia tiene un ciclo de vida: reportada, atendida, controlada, cerrada. Aquí registramos cada cambio de estado sin perder el anterior (CDC Tipo 2). También separamos la dirección del distrito, extraemos coordenadas y desglosamos el tipo de emergencia en 3 niveles jerárquicos.
 
-**🥇 Gold — Modelo estrella**
-4 dimensiones (Tiempo, Tipo, Distrito, Estado) + `FACT_EMERGENCIA` con TURNO calculado desde la hora real del incidente. Carga con `ON CONFLICT DO UPDATE` — siempre refleja el estado vigente.
+**🥇 Gold — El tablero de control**
+Todo lo anterior se organiza en un modelo estrella: 4 dimensiones (tiempo, tipo, distrito, estado) que rodean una tabla de hechos con métricas listas para graficar. El turno (madrugada, mañana, tarde, noche) se calcula automáticamente según la hora del incidente.
 
 ---
 
