@@ -18,3 +18,5 @@ logs/
 data/
 scraper_test.log
 AGENTS.md
+*.log
+
