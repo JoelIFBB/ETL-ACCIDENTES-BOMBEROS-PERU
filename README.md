@@ -6,7 +6,7 @@ Un pipeline ETL que extrae emergencias en tiempo real del Cuerpo de Bomberos del
 
 **1 comando para levantar todo:** `docker compose up -d`
 
-![Python](https://img.shields.io/badge/Python-3.14-3776AB) ![Apache Airflow](https://img.shields.io/badge/Airflow-3.1.8-017CEE) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED) ![Great Expectations](https://img.shields.io/badge/Great_Expectations-passing-FF6F00) ![pytest](https://img.shields.io/badge/pytest-18_passing-0A9EDC)
+![Python](https://img.shields.io/badge/Python-3.14-3776AB) ![Apache Airflow](https://img.shields.io/badge/Airflow-3.1.8-017CEE) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED) ![Great Expectations](https://img.shields.io/badge/Great_Expectations-passing-FF6F00) ![pytest](https://img.shields.io/badge/pytest-62_passing-0A9EDC)
 
 ---
 
@@ -14,9 +14,10 @@ Un pipeline ETL que extrae emergencias en tiempo real del Cuerpo de Bomberos del
 
 - **9 tareas orquestadas** en Airflow, desde scraping hasta modelo analítico
 - **7 tablas en PostgreSQL 16** con esquema dimensional listo para consultas BI
-- **18 tests automatizados** con pytest (100% pasando)
+- **62 tests automatizados** con pytest (9/9 módulos cubiertos)
 - **8 servicios Docker** (Airflow + Celery + PostgreSQL + Redis)
 - **Desplegable con 1 comando**
+- **Documentación viva** en [`AGENTS.md`](AGENTS.md) — reglas, deuda técnica, estado del proyecto
 
 ## Diseño del pipeline
 
@@ -27,6 +28,8 @@ Un pipeline ETL que extrae emergencias en tiempo real del Cuerpo de Bomberos del
 - **Great Expectations** validando cada batch antes de persistir — la calidad de datos es parte del pipeline, no un paso aparte
 
 ## Arquitectura
+
+![Arquitectura ETL](ETL-ACCIDENTES.png)
 
 ```mermaid
 flowchart LR
@@ -41,13 +44,14 @@ flowchart LR
 ## Stack
 
 | Categoría | Tecnología |
-|---|---|
+|---|---|---|
 | Lenguaje | Python 3.14 con uv |
 | Orquestación | Apache Airflow 3.1.8 + Celery + Redis |
 | Base de datos | PostgreSQL 16 |
 | Calidad de datos | Great Expectations |
 | Infraestructura | Docker Compose (8 servicios) |
-| Testing | pytest (18 tests) |
+| Testing | pytest (62 tests, 9/9 módulos) |
+| Documentación | [`AGENTS.md`](AGENTS.md) — reglas, deuda técnica, estado |
 
 ## Cómo ejecutar
 
@@ -58,16 +62,43 @@ docker compose up -d
 
 Trigger manual del DAG `pipeline_accidents` en `http://localhost:8080`.
 
+## Documentación clave
+
+| Recurso | Descripción |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Reglas del proyecto, deuda técnica priorizada, cómo trabajar, estado actual |
+| [`scripts/initdb/`](scripts/initdb/) | 7 scripts SQL del Star Schema (dimensiones + fact + índices) |
+| [`docker-compose.yaml`](docker-compose.yaml) | 8 servicios: Airflow, Celery, PostgreSQL 16, Redis |
+
+## Fases completadas
+
+| Fase | Logro |
+|---|---|
+| 0 | Bug `DIM_TIEMPO` — columna `TURNO` eliminada del SQL (se calcula en la FACT) |
+| 1 | Refactor `db.py` — `get_env()` y `get_connection()` ahora compartidos por todos los loaders |
+| 2 | Tests — 44 nuevos, cobertura 9/9 módulos (antes 4/9) |
+| 3 | Type hints al 100% en `transform_silver.py` y `transform_gold.py` |
+| 4 | Paths externalizados a `BOMBEROS_BRONZE_PATH` y `BOMBEROS_TMP_DIR` |
+
 ## Estructura
 
 ```
 src/
-├── extract/scraper.py          # Web scraping
+├── extract/scraper.py          # Web scraping (fetch + parse HTML)
 ├── transform/                  # Transformaciones Silver → Gold
 ├── validation/                 # Great Expectations
-├── load/                       # Carga CDC (Silver + Gold + Hash)
-├── utils/hashing.py            # SHA256
+├── load/                       # Carga CDC (Bronze + Silver + Gold + Hash)
+├── utils/                      # db.py (conexión), hashing.py (SHA256)
 dags/dag_accidents.py           # 9 tareas en secuencia
 scripts/initdb/                 # 7 scripts SQL (esquema completo)
-tests/                          # 18 tests
+tests/
+├── test_scraper.py             # Scraping
+├── test_hashing.py             # SHA256
+├── test_hash_to_storage.py     # Hash persistence
+├── test_silver_to_storage.py   # CDC loader (Silver)
+├── test_transform_silver.py    # Transformaciones Silver
+├── test_transform_gold.py      # Star Schema (Gold)
+├── test_validate_bronze.py     # Great Expectations
+├── test_gold_to_storage.py     # Gold loader
+└── test_raw_to_storage.py      # Bronze E/S
 ```
