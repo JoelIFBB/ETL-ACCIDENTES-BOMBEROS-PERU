@@ -1,51 +1,12 @@
 # src/load/silver_to_storage.py
 import logging
-import os
-import time
 
 import pandas as pd
 import psycopg2
 
+from src.utils.db import get_env, get_connection
+
 logger = logging.getLogger(__name__)
-
-
-def _get_env(key: str) -> str:
-    """
-    Lee una variable de entorno y lanza error claro si no está definida.
-    """
-    value = os.getenv(key)
-    if not value:
-        raise EnvironmentError(
-            f"Variable de entorno '{key}' no está definida. "
-            f"Agrégala a tu archivo .env"
-        )
-    return value
-
-
-def _get_connection(max_retries: int = 3, delay: float = 2.0):
-    """
-    Intenta conectarse a bomberos_db hasta max_retries veces.
-    Espera delay segundos entre intentos para tolerar fallos momentáneos.
-    """
-    last_error = None
-    for attempt in range(1, max_retries + 1):
-        try:
-            return psycopg2.connect(
-                host=_get_env("BOMBEROS_DB_HOST"),
-                port=int(os.getenv("BOMBEROS_DB_PORT", 5432)),
-                dbname=_get_env("BOMBEROS_DB_NAME"),
-                user=_get_env("BOMBEROS_DB_USER"),
-                password=_get_env("BOMBEROS_DB_PASSWORD"),
-            )
-        except psycopg2.OperationalError as e:
-            last_error = e
-            logger.warning("Intento %d/%d fallido: %s", attempt, max_retries, e)
-            if attempt < max_retries:
-                time.sleep(delay)
-
-    raise psycopg2.OperationalError(
-        f"No se pudo conectar tras {max_retries} intentos: {last_error}"
-    )
 
 
 def _get_estados_actuales(cur, nro_partes: list[str]) -> dict[str, str]:
@@ -145,7 +106,7 @@ def upload_silver_data(df: pd.DataFrame) -> dict:
     ignorados    = 0
 
     try:
-        conn = _get_connection()
+        conn = get_connection()
 
         with conn.cursor() as cur:
             # Una sola query para todos los NroParte del batch

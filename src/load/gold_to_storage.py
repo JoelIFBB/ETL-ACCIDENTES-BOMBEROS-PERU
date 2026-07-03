@@ -2,7 +2,7 @@
 import logging
 import pandas as pd
 
-from src.load.silver_to_storage import _get_connection  # reutilizamos conexión compartida
+from src.utils.db import get_connection
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ def upload_gold_data(
     """
     conn = None
     try:
-        conn = _get_connection()
+        conn = get_connection()
 
         with conn.cursor() as cur:
 

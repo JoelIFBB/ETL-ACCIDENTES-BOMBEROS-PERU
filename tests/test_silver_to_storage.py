@@ -1,4 +1,4 @@
-# tests/test_silver_to_storage.py
+# tests/test_silver_to_storage.py — pruebas del loader accidents_silver (CDC)
 import pandas as pd
 import pytest
 from unittest.mock import patch, MagicMock
@@ -58,7 +58,7 @@ def test_new_accident_triggers_insert(sample_row):
     mock_conn, mock_cur = _make_mock_conn(fetchall_value=[])
 
     with patch("src.load.silver_to_storage.psycopg2.connect", return_value=mock_conn), \
-         patch("src.load.silver_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         result = upload_silver_data(sample_row)
 
@@ -80,7 +80,7 @@ def test_same_state_is_ignored(sample_row):
     mock_conn, mock_cur = _make_mock_conn(fetchall_value=[("2026022027", "ATENDIENDO")])
 
     with patch("src.load.silver_to_storage.psycopg2.connect", return_value=mock_conn), \
-         patch("src.load.silver_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         result = upload_silver_data(sample_row)
 
@@ -101,7 +101,7 @@ def test_state_change_triggers_update(sample_row):
     mock_conn, mock_cur = _make_mock_conn(fetchall_value=[("2026022027", "CONTROLADO")])
 
     with patch("src.load.silver_to_storage.psycopg2.connect", return_value=mock_conn), \
-         patch("src.load.silver_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         result = upload_silver_data(sample_row)
 
@@ -156,7 +156,7 @@ def test_mixed_batch_counts_correctly():
     )
 
     with patch("src.load.silver_to_storage.psycopg2.connect", return_value=mock_conn), \
-         patch("src.load.silver_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         result = upload_silver_data(df)
 
@@ -175,7 +175,7 @@ def test_commit_is_called_on_success(sample_row):
     mock_conn, mock_cur = _make_mock_conn(fetchall_value=[])
 
     with patch("src.load.silver_to_storage.psycopg2.connect", return_value=mock_conn), \
-         patch("src.load.silver_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         upload_silver_data(sample_row)
 
@@ -193,7 +193,7 @@ def test_rollback_is_called_on_error(sample_row):
     mock_cur.execute.side_effect = Exception("Error de Postgres simulado")
 
     with patch("src.load.silver_to_storage.psycopg2.connect", return_value=mock_conn), \
-         patch("src.load.silver_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         with pytest.raises(Exception, match="Error de Postgres simulado"):
             upload_silver_data(sample_row)
@@ -211,7 +211,7 @@ def test_connection_is_always_closed(sample_row):
     mock_conn, mock_cur = _make_mock_conn(fetchall_value=[])
 
     with patch("src.load.silver_to_storage.psycopg2.connect", return_value=mock_conn), \
-         patch("src.load.silver_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         upload_silver_data(sample_row)
 

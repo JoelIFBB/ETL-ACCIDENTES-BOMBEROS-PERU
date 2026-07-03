@@ -7,7 +7,7 @@ from src.load.hash_to_storage import load_last_hash, save_hash
 def test_load_primera_ejecucion():
     """Si no hay hash previo → devuelve None."""
     with patch("src.load.hash_to_storage.psycopg2.connect") as mock_connect, \
-         patch("src.load.hash_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = None
@@ -23,7 +23,7 @@ def test_load_devuelve_ultimo_hash():
     hash_esperado = "a" * 64
 
     with patch("src.load.hash_to_storage.psycopg2.connect") as mock_connect, \
-         patch("src.load.hash_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = (hash_esperado,)
@@ -39,7 +39,7 @@ def test_save_hash_ejecuta_insert():
     hash_value = "b" * 64
 
     with patch("src.load.hash_to_storage.psycopg2.connect") as mock_connect, \
-         patch("src.load.hash_to_storage._get_env", return_value="fake"):
+         patch("src.utils.db.get_env", return_value="fake"):
 
         mock_cursor = MagicMock()
         mock_connect.return_value.cursor.return_value.__enter__.return_value = mock_cursor

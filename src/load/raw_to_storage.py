@@ -6,7 +6,10 @@ import pendulum
 
 logger = logging.getLogger(__name__)
 
-BASE_PATH = "/opt/airflow/data/bronze/accidentes"
+_BRONZE_PATH = os.getenv(
+    "BOMBEROS_BRONZE_PATH",
+    "/opt/airflow/data/bronze/accidentes",
+)
 
 
 def upload_raw_data(records: list[dict], ingestion_datetime: pendulum.DateTime) -> None:
@@ -18,7 +21,7 @@ def upload_raw_data(records: list[dict], ingestion_datetime: pendulum.DateTime) 
         ingestion_date = ingestion_datetime.strftime("%Y-%m-%d")
         timestamp      = ingestion_datetime.strftime("%Y%m%d_%H%M%S")
 
-        folder_path = f"{BASE_PATH}/ingestion_date={ingestion_date}"
+        folder_path = f"{_BRONZE_PATH}/ingestion_date={ingestion_date}"
         os.makedirs(folder_path, exist_ok=True)
 
         file_path = f"{folder_path}/accidentes_{timestamp}.json"
