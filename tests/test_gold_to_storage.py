@@ -123,15 +123,21 @@ def test_upsert_fact_update_count():
 
 def test_resolve_fact_ids_maps_real_ids(sample_silver_df):
     fact = pd.DataFrame([{
-        "NRO_PARTE": "001", "ID_TIPO": 1, "ID_DISTRITO": 1,
-        "ID_ESTADO": 1, "ID_TIEMPO": 20260627, "TURNO": "Madrugada",
-        "MAQUINAS_COUNT": 2, "LATITUD": -12.0049, "LONGITUD": -77.0632,
+        "NRO_PARTE": "001",
+        "tipo": "INCENDIO / VEHICULO / AUTOMOVIL",
+        "distrito": "MIRAFLORES",
+        "estado": "ATENDIENDO",
+        "fecha_hora": pd.Timestamp("2026-06-27 01:06:42"),
+        "TURNO": "Madrugada",
+        "MAQUINAS_COUNT": 2,
+        "LATITUD": -12.0049,
+        "LONGITUD": -77.0632,
     }])
     map_tipo = {"INCENDIO / VEHICULO / AUTOMOVIL": 10}
     map_distrito = {"MIRAFLORES": 20}
     map_estado = {"ATENDIENDO": 30}
     resolved = _resolve_fact_ids(
-        fact, map_tipo, map_distrito, map_estado, sample_silver_df
+        fact, map_tipo, map_distrito, map_estado
     )
     assert resolved["ID_TIPO"].iloc[0] == 10
     assert resolved["ID_DISTRITO"].iloc[0] == 20
@@ -157,9 +163,15 @@ def test_upload_gold_data_full_flow(sample_silver_df):
         "DIA_SEMANA": 6, "NOMBRE_MES": "Junio", "NOMBRE_DIA": "Sabado",
     }])
     gold_fact = pd.DataFrame([{
-        "NRO_PARTE": "001", "ID_TIPO": 1, "ID_DISTRITO": 1,
-        "ID_ESTADO": 1, "ID_TIEMPO": 20260627, "TURNO": "Madrugada",
-        "MAQUINAS_COUNT": 2, "LATITUD": -12.0049, "LONGITUD": -77.0632,
+        "NRO_PARTE": "001",
+        "tipo": "INCENDIO / VEHICULO / AUTOMOVIL",
+        "distrito": "MIRAFLORES",
+        "estado": "ATENDIENDO",
+        "fecha_hora": pd.Timestamp("2026-06-27 01:06:42"),
+        "TURNO": "Madrugada",
+        "MAQUINAS_COUNT": 2,
+        "LATITUD": -12.0049,
+        "LONGITUD": -77.0632,
     }])
 
     gold_tables = {
@@ -178,7 +190,7 @@ def test_upload_gold_data_full_flow(sample_silver_df):
 
     with patch("src.load.gold_to_storage.get_connection",
                return_value=conn):
-        result = upload_gold_data(gold_tables, sample_silver_df)
+        result = upload_gold_data(gold_tables)
 
     assert result["fact_insertados"] == 1
     assert result["fact_actualizados"] == 0

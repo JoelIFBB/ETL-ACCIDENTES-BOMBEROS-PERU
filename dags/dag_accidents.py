@@ -17,7 +17,6 @@ from src.load.silver_to_storage import upload_silver_data
 from src.transform.transform_gold import transform_to_gold
 from src.load.gold_to_storage import upload_gold_data
 
-import pandas as pd
 import psycopg2
 
 URL    = os.getenv("SGNORTE_URL")
@@ -161,11 +160,8 @@ def pipeline_accidents():
 
         logger.info("✓ %d registros activos obtenidos de Silver", len(silver_records))
 
-        silver_df = pd.DataFrame(silver_records)
-        silver_df["fecha_hora"] = pd.to_datetime(silver_df["fecha_hora"])
-
         gold_tables = transform_to_gold(silver_records)
-        result      = upload_gold_data(gold_tables, silver_df)
+        result      = upload_gold_data(gold_tables)
 
         logger.info(
             "✓ Gold — FACT: %d insertados, %d actualizados",

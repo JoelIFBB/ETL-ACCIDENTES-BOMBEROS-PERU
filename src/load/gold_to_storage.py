@@ -90,38 +90,21 @@ def _resolve_fact_ids(
     map_tipo:      dict[str, int],
     map_distrito:  dict[str, int],
     map_estado:    dict[str, int],
-    silver_df:     pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Reemplaza los IDs temporales de pandas por los IDs reales de PostgreSQL.
-    Necesario porque el SERIAL de PostgreSQL no coincide con range(1, n+1).
+    Resuelve las FKs usando IDs reales de PostgreSQL.
+    fact_df contiene llaves naturales (tipo, distrito, estado, fecha_hora)
+    y TURNO ya calculado en la capa de transformación.
     Los registros sin match reciben -1 (miembro 'Sin datos').
     """
-    # Re-unimos desde silver_df para tener las claves naturales disponibles
-    fact = silver_df[["nro_parte", "tipo", "distrito", "estado",
-                       "fecha_hora", "maquinas_count", "latitud", "longitud"]].copy()
+    fact = fact_df.copy()
 
     fact["ID_TIPO"]     = fact["tipo"].map(map_tipo).fillna(-1).astype(int)
     fact["ID_DISTRITO"] = fact["distrito"].map(map_distrito).fillna(-1).astype(int)
     fact["ID_ESTADO"]   = fact["estado"].map(map_estado).fillna(-1).astype(int)
     fact["ID_TIEMPO"]   = fact["fecha_hora"].dt.normalize().dt.strftime("%Y%m%d").astype(int)
 
-    fact["TURNO"] = pd.cut(
-        fact["fecha_hora"].dt.hour,
-        bins=[-1, 5, 11, 18, 23],
-        labels=["Madrugada", "Mañana", "Tarde", "Noche"],
-        ordered=False,
-    ).astype(str)
-
-    return fact[[
-        "nro_parte", "ID_TIPO", "ID_DISTRITO", "ID_ESTADO",
-        "ID_TIEMPO", "TURNO", "maquinas_count", "latitud", "longitud",
-    ]].rename(columns={
-        "nro_parte":     "NRO_PARTE",
-        "maquinas_count":"MAQUINAS_COUNT",
-        "latitud":       "LATITUD",
-        "longitud":      "LONGITUD",
-    })
+    return fact.drop(columns=["tipo", "distrito", "estado", "fecha_hora"])
 
 
 def _upsert_fact(cur, fact_df: pd.DataFrame) -> dict[str, int]:
@@ -168,10 +151,7 @@ def _upsert_fact(cur, fact_df: pd.DataFrame) -> dict[str, int]:
 # PUNTO DE ENTRADA
 # ---------------------------------------------------------------------------
 
-def upload_gold_data(
-    gold_tables: dict[str, pd.DataFrame],
-    silver_df:   pd.DataFrame,
-) -> dict:
+def upload_gold_data(gold_tables: dict[str, pd.DataFrame]) -> dict:
     """
     Carga todas las tablas Gold a PostgreSQL en el orden correcto:
     1. Dimensiones primero (generan IDs reales via SERIAL)
@@ -179,7 +159,6 @@ def upload_gold_data(
 
     Parámetros:
         gold_tables — resultado de transform_to_gold()
-        silver_df   — DataFrame Silver original para re-resolver FKs con IDs reales
 
     Retorna métricas de carga por tabla.
     """
@@ -202,12 +181,11 @@ def upload_gold_data(
             logger.info("Cargando DIM_TIEMPO...")
             _upsert_dim_tiempo(cur, gold_tables["DIM_TIEMPO"])
 
-            # 2. Re-resolver FKs con IDs reales de PostgreSQL
-            logger.info("Re-resolviendo FKs con IDs reales de PostgreSQL...")
+            # 2. Resolver FKs con IDs reales de PostgreSQL
+            logger.info("Resolviendo FKs con IDs reales de PostgreSQL...")
             fact_df = _resolve_fact_ids(
                 gold_tables["FACT_EMERGENCIA"],
                 map_tipo, map_distrito, map_estado,
-                silver_df,
             )
 
             # 3. FACT

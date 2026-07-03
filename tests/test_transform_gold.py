@@ -114,39 +114,22 @@ def test_build_dim_tiempo_different_dates():
 
 
 def test_build_fact_fk_resolution(silver_df):
-    dim_tipo = build_dim_tipo(silver_df)
-    dim_distrito = build_dim_distrito(silver_df)
-    dim_estado = build_dim_estado(silver_df)
-    dim_tiempo = build_dim_tiempo(silver_df)
-    fact = build_fact_emergencia(
-        silver_df, dim_tipo, dim_distrito, dim_estado, dim_tiempo
-    )
+    fact = build_fact_emergencia(silver_df)
     assert len(fact) == 2
     assert list(fact.columns) == [
-        "NRO_PARTE", "ID_TIPO", "ID_DISTRITO", "ID_ESTADO",
-        "ID_TIEMPO", "TURNO", "MAQUINAS_COUNT", "LATITUD", "LONGITUD",
+        "NRO_PARTE", "tipo", "distrito", "estado",
+        "fecha_hora", "TURNO", "MAQUINAS_COUNT", "LATITUD", "LONGITUD",
     ]
-    assert fact["ID_TIPO"].iloc[0] == 1
-    assert fact["ID_TIPO"].iloc[1] == 1
+    assert fact["tipo"].iloc[0] == "INCENDIO / VEHICULO / AUTOMOVIL"
 
 
 def test_build_fact_turno_calculation(silver_df):
-    dim_tipo = build_dim_tipo(silver_df)
-    dim_distrito = build_dim_distrito(silver_df)
-    dim_estado = build_dim_estado(silver_df)
-    dim_tiempo = build_dim_tiempo(silver_df)
-    fact = build_fact_emergencia(
-        silver_df, dim_tipo, dim_distrito, dim_estado, dim_tiempo
-    )
+    fact = build_fact_emergencia(silver_df)
     assert fact["TURNO"].iloc[0] == "Madrugada"
     assert fact["TURNO"].iloc[1] == "Mañana"
 
 
 def test_build_fact_unknown_district_gets_minus_one(silver_df):
-    dim_tipo = build_dim_tipo(silver_df)
-    dim_distrito = build_dim_distrito(silver_df)
-    dim_estado = build_dim_estado(silver_df)
-    dim_tiempo = build_dim_tiempo(silver_df)
     extra = pd.DataFrame([{
         "nro_parte": "003",
         "fecha_hora": pd.Timestamp("2026-06-27 01:06:42"),
@@ -163,11 +146,9 @@ def test_build_fact_unknown_district_gets_minus_one(silver_df):
         "longitud": None,
     }])
     df = pd.concat([silver_df, extra], ignore_index=True)
-    fact = build_fact_emergencia(
-        df, dim_tipo, dim_distrito, dim_estado, dim_tiempo
-    )
+    fact = build_fact_emergencia(df)
     unknown = fact[fact["NRO_PARTE"] == "003"]
-    assert unknown["ID_DISTRITO"].iloc[0] == -1
+    assert unknown["distrito"].iloc[0] == "SIN_DISTRITO"
 
 
 def test_transform_to_gold_returns_dict_with_5_tables(silver_df):

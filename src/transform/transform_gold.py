@@ -120,58 +120,19 @@ def build_dim_tiempo(silver_df: pd.DataFrame) -> pd.DataFrame:
 # FACT
 # ---------------------------------------------------------------------------
 
-def build_fact_emergencia(
-    silver_df:    pd.DataFrame,
-    dim_tipo:     pd.DataFrame,
-    dim_distrito: pd.DataFrame,
-    dim_estado:   pd.DataFrame,
-    dim_tiempo:   pd.DataFrame,
-) -> pd.DataFrame:
+def build_fact_emergencia(silver_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Construye FACT_EMERGENCIA — tabla de hechos del modelo estrella.
-
-    Resuelve las FKs haciendo JOIN contra cada dimensión.
-    Registros sin FK válida reciben -1 (miembro 'Sin datos' en la dimensión).
+    Construye FACT_EMERGENCIA con llaves naturales + TURNO.
+    Las FKs se resuelven en el loader contra los IDs reales de PostgreSQL.
 
     Medidas incluidas:
         MAQUINAS_COUNT — cantidad de máquinas despachadas al incidente
         LATITUD, LONGITUD — coordenadas del incidente (pueden ser NULL)
 
-    TURNO se calcula aquí desde la hora real del incidente, no desde DIM_TIEMPO,
-    porque dos incidentes del mismo día pueden tener turnos distintos.
+    TURNO se calcula desde la hora real del incidente.
     """
     fact = silver_df.copy()
 
-    # Resolver ID_TIPO
-    fact = fact.merge(
-        dim_tipo[["ID_TIPO", "CODIGO_ORIGINAL"]],
-        left_on="tipo", right_on="CODIGO_ORIGINAL",
-        how="left",
-    ).drop(columns=["CODIGO_ORIGINAL"])
-
-    # Resolver ID_DISTRITO
-    fact = fact.merge(
-        dim_distrito[["ID_DISTRITO", "NOMBRE_DISTRITO"]],
-        left_on="distrito", right_on="NOMBRE_DISTRITO",
-        how="left",
-    ).drop(columns=["NOMBRE_DISTRITO"])
-
-    # Resolver ID_ESTADO
-    fact = fact.merge(
-        dim_estado[["ID_ESTADO", "NOMBRE_ESTADO"]],
-        left_on="estado", right_on="NOMBRE_ESTADO",
-        how="left",
-    ).drop(columns=["NOMBRE_ESTADO"])
-
-    # Resolver ID_TIEMPO desde fecha truncada a día
-    fact["_fecha_dia"] = fact["fecha_hora"].dt.normalize().dt.strftime("%Y%m%d").astype("Int64")
-    fact = fact.merge(
-        dim_tiempo[["ID_TIEMPO"]],
-        left_on="_fecha_dia", right_on="ID_TIEMPO",
-        how="left",
-    ).drop(columns=["_fecha_dia"])
-
-    # TURNO calculado desde la hora real del incidente
     fact["TURNO"] = pd.cut(
         fact["fecha_hora"].dt.hour,
         bins=[-1, 5, 11, 18, 23],
@@ -179,25 +140,15 @@ def build_fact_emergencia(
         ordered=False,
     ).astype(str)
 
-    # FKs sin match → -1
-    for fk in ["ID_TIPO", "ID_DISTRITO", "ID_ESTADO", "ID_TIEMPO"]:
-        fact[fk] = fact[fk].fillna(-1).astype(int)
-
     return fact[[
-        "nro_parte",
-        "ID_TIPO",
-        "ID_DISTRITO",
-        "ID_ESTADO",
-        "ID_TIEMPO",
-        "TURNO",
-        "maquinas_count",
-        "latitud",
-        "longitud",
+        "nro_parte", "tipo", "distrito", "estado",
+        "fecha_hora", "TURNO",
+        "maquinas_count", "latitud", "longitud",
     ]].rename(columns={
-        "nro_parte":     "NRO_PARTE",
-        "maquinas_count":"MAQUINAS_COUNT",
-        "latitud":       "LATITUD",
-        "longitud":      "LONGITUD",
+        "nro_parte":      "NRO_PARTE",
+        "maquinas_count": "MAQUINAS_COUNT",
+        "latitud":        "LATITUD",
+        "longitud":       "LONGITUD",
     })
 
 
@@ -231,7 +182,7 @@ def transform_to_gold(silver_records: list[dict]) -> dict[str, pd.DataFrame]:
         len(dim_tipo), len(dim_distrito), len(dim_estado), len(dim_tiempo),
     )
 
-    fact = build_fact_emergencia(silver_df, dim_tipo, dim_distrito, dim_estado, dim_tiempo)
+    fact = build_fact_emergencia(silver_df)
 
     logger.info("✓ FACT_EMERGENCIA — %d filas", len(fact))
 
