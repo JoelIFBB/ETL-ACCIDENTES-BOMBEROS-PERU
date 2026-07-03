@@ -20,7 +20,8 @@ from src.load.gold_to_storage import upload_gold_data
 import pandas as pd
 import psycopg2
 
-URL = os.getenv("SGNORTE_URL")
+URL    = os.getenv("SGNORTE_URL")
+TMP_DIR = os.getenv("BOMBEROS_TMP_DIR", "/opt/airflow/data/tmp")
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ def pipeline_accidents():
     def task_fetch() -> str:
         logger.info("Iniciando descarga del HTML...")
         html = fetch_html(URL)
-        tmp_path = f"/opt/airflow/data/tmp/html_{pendulum.now('UTC').strftime('%Y%m%d_%H%M%S')}.html"
+        tmp_path = f"{TMP_DIR}/html_{pendulum.now('UTC').strftime('%Y%m%d_%H%M%S')}.html"
         with open(tmp_path, "w", encoding="utf-8") as f:
             f.write(html)
         logger.info(f"HTML descargado correctamente — {len(html)} caracteres")
