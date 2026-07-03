@@ -134,10 +134,3 @@ tests/
 ```bash
 pytest tests/  # 62 tests, 9/9 módulos
 ```
-
----
-
-## Autor
-
-**Joel**
-- GitHub: [@JoelIFBB](https://github.com/JoelIFBB)
