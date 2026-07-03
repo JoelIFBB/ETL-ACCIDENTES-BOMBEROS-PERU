@@ -17,7 +17,6 @@ Un pipeline ETL que extrae emergencias en tiempo real del Cuerpo de Bomberos del
 - **62 tests automatizados** con pytest (9/9 módulos cubiertos)
 - **8 servicios Docker** (Airflow + Celery + PostgreSQL + Redis)
 - **Desplegable con 1 comando**
-- **Documentación viva** en [`AGENTS.md`](AGENTS.md) — reglas, deuda técnica, estado del proyecto
 
 ## Diseño del pipeline
 
@@ -31,27 +30,16 @@ Un pipeline ETL que extrae emergencias en tiempo real del Cuerpo de Bomberos del
 
 ![Arquitectura ETL](ETL-ACCIDENTES.png)
 
-```mermaid
-flowchart LR
-  Web[Bomberos Perú] --> Bronze[Bronze - Raw JSON]
-  Bronze --> Quality[Great Expectations]
-  Quality --> Hash[Hash Check SHA256]
-  Hash --> Silver[Silver - CDC con historial]
-  Silver --> Gold[Gold - Star Schema]
-  Gold --> DB[(PostgreSQL 16)]
-```
-
 ## Stack
 
 | Categoría | Tecnología |
-|---|---|---|
+|---|---|
 | Lenguaje | Python 3.14 con uv |
 | Orquestación | Apache Airflow 3.1.8 + Celery + Redis |
 | Base de datos | PostgreSQL 16 |
 | Calidad de datos | Great Expectations |
 | Infraestructura | Docker Compose (8 servicios) |
 | Testing | pytest (62 tests, 9/9 módulos) |
-| Documentación | [`AGENTS.md`](AGENTS.md) — reglas, deuda técnica, estado |
 
 ## Cómo ejecutar
 
@@ -66,19 +54,9 @@ Trigger manual del DAG `pipeline_accidents` en `http://localhost:8080`.
 
 | Recurso | Descripción |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Reglas del proyecto, deuda técnica priorizada, cómo trabajar, estado actual |
-| [`scripts/initdb/`](scripts/initdb/) | 7 scripts SQL del Star Schema (dimensiones + fact + índices) |
-| [`docker-compose.yaml`](docker-compose.yaml) | 8 servicios: Airflow, Celery, PostgreSQL 16, Redis |
-
-## Fases completadas
-
-| Fase | Logro |
-|---|---|
-| 0 | Bug `DIM_TIEMPO` — columna `TURNO` eliminada del SQL (se calcula en la FACT) |
-| 1 | Refactor `db.py` — `get_env()` y `get_connection()` ahora compartidos por todos los loaders |
-| 2 | Tests — 44 nuevos, cobertura 9/9 módulos (antes 4/9) |
-| 3 | Type hints al 100% en `transform_silver.py` y `transform_gold.py` |
-| 4 | Paths externalizados a `BOMBEROS_BRONZE_PATH` y `BOMBEROS_TMP_DIR` |
+| [`scripts/initdb/`](scripts/initdb/) | Esquema dimensional completo (7 tablas: 4 dimensiones + 1 fact + índices) |
+| [`docker-compose.yaml`](docker-compose.yaml) | Infraestructura: Airflow + Celery + PostgreSQL 16 + Redis |
+| [`ETL-ACCIDENTES.png`](ETL-ACCIDENTES.png) | Diagrama de arquitectura del pipeline |
 
 ## Estructura
 
